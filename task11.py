@@ -4,14 +4,13 @@
 11. Объединение выпуклых полигонов
 """
 
-# size of window
-size = 100
+from tkinter import *
 
 
-# функция определяет, с какой стороны от вектора AB находится точка C
+# функция определяет, с какой стороны от вектора находится точка
 # (положительное возвращаемое значение соответствует левой стороне, отрицательное — правой, 0 - принадлежит).
-def rotate(A, B, C):
-  return (B[0]-A[0])*(C[1]-B[1])-(B[1]-A[1])*(C[0]-B[0])
+def rotate(line_from, line_to, point):
+  return (line_to[0] - line_from[0]) * (point[1] - line_to[1]) - (line_to[1] - line_from[1]) * (point[0] - line_to[0])
 
 
 # find rightest point in polygon
@@ -86,43 +85,187 @@ def find_vl(pointsL, vr, type):
     return vl
 
 
-def bridge(pointsL, pointsR, type):
-    vl = right_point(points=pointsL)
-    vr = left_point(points=pointsR)
-    while 2 * 2 == 4:
-        vr_new = find_vr(pointsR, vl, type)
-        vl_new = find_vl(pointsL, vr, type)
-        if vr == vr_new and vl == vl_new:
+def jarvismarch(A):
+    n = len(A)
+    P = list(range(n))
+    # start point
+    for i in range(1,n):
+        if A[P[i]][0]<A[P[0]][0]:
+            P[i], P[0] = P[0], P[i]
+    H = [P[0]]
+    del P[0]
+    P.append(H[0])
+    while True:
+        right = 0
+        for i in range(1,len(P)):
+            if rotate(A[H[-1]],A[P[right]],A[P[i]])<0:
+                right = i
+        if P[right]==H[0]:
             break
-        vr = vr_new
-        vl = vl_new
-    return [vl, vr]
+        else:
+            H.append(P[right])
+            del P[right]
+    return H
 
 
-def merge(pointsL, pointsR):
-    upper_line = bridge(pointsL=pointsL, pointsR=pointsR, type='upper')
-    lower_line = bridge(pointsL=pointsL, pointsR=pointsR, type='lower')
-    return [upper_line, lower_line]
+class Window:
+    size = 500
+
+    def __init__(self):
+        self.window = Tk()
+        self.full_figure = False
+        self.full_figure2 = False
+        # point
+        self.point = False
+        self.point2 = False
+        self.point_x = 0
+        self.point_y = 0
+        self.window.title("MECHMAT SILA")
+        self.window.resizable(False, False)
+        # current figure
+        self.points = []
+        # current figure 2
+        self.points2 = []
+        # canvas
+        self.canvas = Canvas(self.window, width=self.size, height=self.size, background='white')
+        self.canvas.grid(row=0, column=0)
+        # mouse clicks
+        self.canvas.bind("<ButtonRelease-1>", self.left_button_release)
+        self.canvas.bind("<ButtonRelease-2>", self.right_button_release)
+
+        # clear button
+        self.clear_button = Button(self.window, text='Clear', command=self.clear_window)
+        self.clear_button.grid(row=2, column=3)
+        # self.clear_button.pack()
+
+        # go button
+        self.go_button = Button(self.window, text='Go', command=self.start_algorithm)
+        self.go_button.grid(row=1, column=3)
+
+        self.window.mainloop()
+
+    def clear_window(self):
+        self.canvas.delete("all")
+        self.full_figure = False
+        self.full_figure2 = False
+        self.points = []
+        self.points2 = []
+        # self.image = Image.new('RGB', (self.DEFAULT_WIDTH, self.DEFAULT_WIDTH), 'white')
+        # self.draw = ImageDraw.Draw(self.image)
+
+    def start_algorithm(self):
+        lines = self.merge(pointsL=self.points, pointsR=self.points2)
+        lower = lines[0]
+        upper = lines[1]
+        self.canvas.create_line(upper[0][0], upper[0][1], upper[1][0], upper[1][1], fill="red", width=2)
+        self.canvas.create_line(lower[0][0], lower[0][1], lower[1][0], lower[1][1], fill="red", width=2)
+
+    def left_button_release(self, event):
+        x, y = event.x, event.y
+        if not self.full_figure:
+            if self.points == []:
+                self.points.append([x, y])
+                self.canvas.create_oval(x, y, x - 1, y - 1)
+            else:
+                x0, y0 = self.points[-1]
+                self.canvas.create_line(x0, y0, x, y)
+                self.points.append([x, y])
+        elif not self.full_figure2:
+            if self.points2 == []:
+                self.points2.append([x, y])
+                self.canvas.create_oval(x, y, x - 1, y - 1)
+            else:
+                x0, y0 = self.points2[-1]
+                self.canvas.create_line(x0, y0, x, y)
+                self.points2.append([x, y])
+
+    def right_button_release(self, event):
+        if not self.full_figure:
+            print(self.points)
+            if len(self.points) > 2:
+                x0, y0 = self.points[-1]
+                x, y = self.points[0]
+                self.canvas.create_line(x0, y0, x, y)
+                self.full_figure = True
+
+        elif not self.full_figure2:
+            print(self.points2)
+            if len(self.points2) > 2:
+                x0, y0 = self.points2[-1]
+                x, y = self.points2[0]
+                self.canvas.create_line(x0, y0, x, y)
+                self.full_figure2 = True
+
+    def polygon(self):
+        if not self.full_figure:
+            self.canvas.delete("all")
+            if self.point:
+                x, y = self.point_x, self.point_y
+                self.canvas.create_oval(x + 1, y + 1, x - 1, y - 1, fill="green")
+            if len(self.points) == 1:
+                x, y = self.points[0]
+                self.canvas.create_oval(x, y, x - 1, y - 1)
+            else:
+                l = len(self.points)
+                for i in range(0, len(self.points)):
+                    x, y = self.points[i]
+                    x0, y0 = self.points[(i - 1) % l]
+                    self.canvas.create_line(x0, y0, x, y)
+
+        elif not self.full_figure2:
+            self.canvas.delete("all")
+            if self.point2:
+                x, y = self.point_x, self.point_y
+                self.canvas.create_oval(x + 1, y + 1, x - 1, y - 1, fill="green")
+            if len(self.points2) == 1:
+                x, y = self.points2[0]
+                self.canvas.create_oval(x, y, x - 1, y - 1)
+            else:
+                l = len(self.points2)
+                for i in range(0, len(self.points2)):
+                    x, y = self.points2[i]
+                    x0, y0 = self.points2[(i - 1) % l]
+                    self.canvas.create_line(x0, y0, x, y)
+
+    def bridge(self, pointsL, pointsR, type):
+        vl = right_point(points=pointsL)
+        self.canvas.create_oval(vl[0], vl[1], vl[0] - 1, vl[1] - 1, outline="red", fill="red", width=2)
+
+        vr = left_point(points=pointsR)
+        self.canvas.create_oval(vr[0], vr[1], vr[0] - 1, vr[1] - 1, outline="red", fill="red", width=2)
+        while 2 * 2 == 4:
+            vr_new = find_vr(pointsR, vl, type)
+            vl_new = find_vl(pointsL, vr, type)
+            # self.canvas.create_line(vl_new[0],vl_new[1] , vr_new[0], vr_new[1], fill="red", width=2)
+            if vr == vr_new and vl == vl_new:
+                break
+            vr = vr_new
+            vl = vl_new
+        return [vl, vr]
+
+    def merge(self, pointsL, pointsR):
+        upper_line = self.bridge(pointsL=pointsL, pointsR=pointsR, type='upper')
+        lower_line = self.bridge(pointsL=pointsL, pointsR=pointsR, type='lower')
+        return [upper_line, lower_line]
 
 
 if __name__ == '__main__':
-    pointsL = [
-        [1, 1],
-        [2, 4],
-        [5, 5],
-        [6, 2],
-        [4, 1],
-        [3, 6]
-    ]
+    # pointsL = [
+    #     [1, 1],
+    #     [2, 4],
+    #     [5, 5],
+    #     [6, 2],
+    #     [4, 1],
+    #     [3, 6]
+    # ]
+    #
+    # pointsR = [
+    #     [10, 1],
+    #     [9, 4],
+    #     [11, 7],
+    #     [14, 6],
+    #     [14, 2],
+    #     [14, 9]
+    # ]
 
-    pointsR = [
-        [10, 1],
-        [9, 4],
-        [11, 7],
-        [14, 6],
-        [14, 2],
-        [14, 9]
-    ]
-    
-    lines = merge(pointsL=pointsL, pointsR=pointsR)
-    print(lines)
+    Window()
