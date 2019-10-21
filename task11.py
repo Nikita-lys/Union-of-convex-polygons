@@ -13,6 +13,7 @@
 from tkinter import *
 from shapely.geometry import LineString
 from math import *
+import time
 
 
 def rotate(line_from, line_to, point):
@@ -223,10 +224,19 @@ class Window:
 
         :return: в self.final_polygon записываются координаты всех точек объединённых полигонов
         """
-        # текущий полигон
-        cur_polygon = self.polygon1
-        # другой полигон
-        other_polygon = self.polygon2
+
+        left1 = find_leftest_point(self.polygon1)
+        left2 = find_leftest_point(self.polygon2)
+        if left1.x < left2.x:
+            # текущий полигон
+            cur_polygon = self.polygon1
+            # другой полигон
+            other_polygon = self.polygon2
+        else:
+            # текущий полигон
+            cur_polygon = self.polygon2
+            # другой полигон
+            other_polygon = self.polygon1
 
         # текущая точка
         cur_point = Point(x=0, y=0, next=None, prev=None)
@@ -262,6 +272,11 @@ class Window:
                 i += 1
                 self.canvas.create_oval(line[0][0] + 1, line[0][1] + 1, line[0][0] - 1, line[0][1] - 1,
                                         outline="red", fill="red", width=3)
+                if len(self.final_points) > 1:
+                    self.canvas.create_line(self.final_points[-2][0], self.final_points[-2][1],
+                                            self.final_points[-1][0], self.final_points[-1][1],
+                                            fill="green", width=2)
+                    time.sleep(1)
                 self.canvas.update()
 
             # текущая точка в другом полигоне
@@ -309,6 +324,10 @@ class Window:
                 self.canvas.create_oval(great_intersection[1][0] + 1, great_intersection[1][1] + 1,
                                         great_intersection[1][0] - 1, great_intersection[1][1] - 1,
                                         outline="red", fill="red", width=3)
+                self.canvas.create_line(self.final_points[-2][0], self.final_points[-2][1],
+                                        self.final_points[-1][0], self.final_points[-1][1],
+                                        fill="green", width=2)
+                time.sleep(1)
                 self.canvas.update()
             else:
                 continue
@@ -325,6 +344,10 @@ class Window:
                         self.canvas.create_oval(point_in_line[0] + 1, point_in_line[1] + 1,
                                                 point_in_line[0] - 1, point_in_line[1] - 1,
                                                 outline="red", fill="red", width=3)
+                        self.canvas.create_line(self.final_points[-2][0], self.final_points[-2][1],
+                                                self.final_points[-1][0], self.final_points[-1][1],
+                                                fill="green", width=2)
+                        time.sleep(1)
                         self.canvas.update()
                     else:
                         other_point = other_next_point
@@ -336,6 +359,11 @@ class Window:
                             cur_point = point
                     next_point = cur_point.next
                     cur_polygon, other_polygon = other_polygon, cur_polygon
+
+        self.canvas.create_line(self.final_points[-1][0], self.final_points[-1][1],
+                                self.final_points[0][0], self.final_points[0][1],
+                                fill="green", width=2)
+        self.canvas.update()
         print('=====================================================\n'
               'END\n'
               '=====================================================\n')
